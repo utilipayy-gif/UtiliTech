@@ -42,23 +42,24 @@ export async function saveSiteSettings(settings:SiteSettings){await database().q
 
 export async function saveServices(services: Service[]) {
   const payload = services.map((service, sort_order) => ({ ...service, sort_order }));
-  await database().query(
-    `with deleted as (
-       delete from public.site_services where site_key = $1
-     )
-     insert into public.site_services (
+  const sql = database();
+  await sql.transaction([
+    sql.query(`delete from public.site_services where site_key = $1`, [siteKey]),
+    sql.query(
+      `insert into public.site_services (
        site_key, slug, title, category, short, intro,
        benefits, deliverables, price, packages, sort_order, updated_at
-     )
-     select
+       )
+       select
        $1, item.slug, item.title, item.category, item.short, item.intro,
        coalesce(item.benefits, '[]'::jsonb),
        coalesce(item.deliverables, '[]'::jsonb), coalesce(item.price,14999), coalesce(item.packages,'[]'::jsonb),
        coalesce(item.sort_order, 0), now()
-     from jsonb_to_recordset($2::jsonb) as item(
+       from jsonb_to_recordset($2::jsonb) as item(
        slug text, title text, category text, short text, intro text,
        benefits jsonb, deliverables jsonb, price integer, packages jsonb, sort_order integer
-     )`,
-    [siteKey, JSON.stringify(payload)],
-  );
+       )`,
+      [siteKey, JSON.stringify(payload)],
+    ),
+  ]);
 }
