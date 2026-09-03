@@ -1,0 +1,9 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { getServices } from "@/lib/content-store";
+import { formatPrice } from "../service-data";
+import { categoryId, groupServices, UtiliFooter, UtiliHeader } from "../site-chrome";
+
+export const dynamic="force-dynamic";
+export const metadata:Metadata={title:"Digital Services | UtiliTech",description:"Explore UtiliTech website, application, marketing, creative, domain and hosting services."};
+export default async function ServicesPage(){const services=await getServices(),groups=groupServices(services);return <main className="nsx-site"><UtiliHeader services={services}/><section className="nsx-page-hero nsx-page-hero-short"><span className="nsx-label">SERVICES / CAPABILITIES</span><h1>The right service for your next <em>move.</em></h1><p>Browse by business need, compare starting prices and open any service for its outcomes and deliverables.</p></section><section className="nsx-section"><div className="nsx-groups nsx-services-page">{groups.map(group=><article id={categoryId(group.title)} key={group.title}><div className="nsx-group-head"><span>{group.number}</span><div><h2>{group.title}</h2><p>{group.description}</p></div></div><div className="nsx-link-grid">{group.services.map(service=><Link href={`/services/${service.slug}`} key={service.slug}><span><strong>{service.title}</strong><small>Starting at {formatPrice(service)}</small></span><b>↗</b></Link>)}</div></article>)}</div></section><section className="nsx-conversion"><div><span>NOT SURE WHICH FITS?</span><h2>Start with your goal, not a technical brief.</h2><p>Tell us what needs to change and we&apos;ll point you to the smallest useful package.</p></div><div><Link className="button button-primary" href="/checkout">Build your package →</Link><Link className="button button-ghost" href="/contact">Ask for guidance</Link></div></section><UtiliFooter/></main>}

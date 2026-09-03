@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getSiteSettings } from "@/lib/content-store";
 
 type LegalShellProps = {
   title: string;
@@ -8,7 +9,8 @@ type LegalShellProps = {
   children: ReactNode;
 };
 
-export default function LegalShell({ title, intro, children }: LegalShellProps) {
+export default async function LegalShell({ title, intro, children }: LegalShellProps) {
+  const settings=await getSiteSettings();
   return (
     <main className="legal-page">
       <header className="legal-header">
@@ -30,15 +32,17 @@ export default function LegalShell({ title, intro, children }: LegalShellProps) 
         <aside className="legal-nav" aria-label="Legal pages">
           <span>Legal documents</span>
           <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/refund">Refund &amp; Cancellation Policy</Link>
           <Link href="/terms">Terms &amp; Conditions</Link>
-          <a href="mailto:utilipayhub@gmail.com">Privacy contact ↗</a>
+          <Link href="/shipping">Shipping Policy</Link>
+          <a href={`mailto:${settings.email}`}>Privacy contact ↗</a>
         </aside>
         <article className="legal-content">{children}</article>
       </div>
 
       <footer className="legal-footer">
-        <div><strong>Questions about these terms?</strong><a href="mailto:utilipayhub@gmail.com">utilipayhub@gmail.com</a></div>
-        <div><span>© 2026 UtiliTech</span><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div>
+        <div><strong>Address</strong><span>{settings.address}</span><a href={`mailto:${settings.email}`}>{settings.email}</a></div>
+        <div><span>© 2026 UtiliTech</span><Link href="/privacy">Privacy</Link><Link href="/refund">Refunds</Link><Link href="/terms">Terms</Link><Link href="/shipping">Shipping</Link></div>
       </footer>
     </main>
   );

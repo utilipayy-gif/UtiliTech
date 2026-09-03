@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-export default function LeadForm() {
+export default function LeadForm({whatsapp="919653127760"}:{whatsapp?:string}) {
   const [sent, setSent] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -21,7 +21,7 @@ export default function LeadForm() {
       .filter(Boolean)
       .join("\n");
 
-    window.open(`https://wa.me/919653127760?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     setSent(true);
   }
 

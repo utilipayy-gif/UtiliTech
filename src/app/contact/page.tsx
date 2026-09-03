@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+import { getServices,getSiteSettings } from "@/lib/content-store";
+import LeadForm from "../lead-form";
+import { UtiliFooter,UtiliHeader } from "../site-chrome";
+export const dynamic="force-dynamic";
+export const metadata:Metadata={title:"Contact Us | UtiliTech",description:"Contact UtiliTech to discuss a website, application, marketing or hosting requirement."};
+export default async function ContactPage(){const services=await getServices(),settings=await getSiteSettings();return <main className="nsx-site"><UtiliHeader services={services}/><section className="nsx-page-hero nsx-page-hero-short"><span className="nsx-label">CONTACT / START HERE</span><h1>What should your digital presence do <em>better?</em></h1><p>Explain the goal in plain language. We&apos;ll help identify the right service and turn it into a clear next step.</p></section><section className="nsx-contact"><div className="nsx-section nsx-contact-grid"><div><span className="nsx-label">CONTACT DETAILS</span><h2>Simple, direct and <em>no pressure.</em></h2><p>Use the form or contact us directly. A rough idea is enough to begin.</p><div className="nsx-direct"><a href={`tel:${settings.phone.replace(/\s/g,"")}`}><span>CALL / WHATSAPP</span><strong>{settings.phone}</strong></a><a href={`mailto:${settings.email}`}><span>EMAIL</span><strong>{settings.email}</strong></a></div><div className="company-card address-card"><span>ADDRESS</span><p>{settings.address}</p></div></div><LeadForm whatsapp={settings.whatsapp}/></div></section><UtiliFooter/></main>}
