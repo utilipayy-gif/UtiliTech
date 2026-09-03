@@ -445,3 +445,21 @@ a { color: inherit; text-decoration: none; }
 @media(max-width:560px){body{overflow-x:hidden}.nsx-header{height:66px}.nsx-head-cta{display:none}.nsx-page-hero{padding:46px 0 50px}.nsx-page-hero h1{font-size:clamp(2.65rem,12vw,3.7rem);line-height:.96}.nsx-hero h1{font-size:clamp(3rem,14vw,4.25rem);line-height:.95}.nsx-section{padding:64px 0}.nsx-heading h2,.nsx-why h2,.nsx-overview h2{font-size:clamp(2.65rem,12vw,3.8rem);line-height:.97}.nsx-start-grid{margin-top:36px}.nsx-start-grid>a{min-height:195px;padding:21px}.nsx-conversion{width:calc(100% - 28px);margin-bottom:65px;padding:27px}.nsx-conversion h2{font-size:2.35rem}.about-profile{gap:45px}.about-sections article{grid-template-columns:38px 1fr;gap:12px}.choice-grid{grid-template-columns:1fr}.choice-grid article{min-height:175px}.order-steps{grid-template-columns:1fr}.order-steps span+span{border-left:0;border-top:1px solid var(--line)}.order-add{grid-template-columns:1fr}.order-add select,.order-summary input,.order-summary textarea{font-size:16px}.order-items article{grid-template-columns:1fr auto}.order-items article>b{grid-column:1/-1;text-align:left}.company-card>div{display:grid}.nsx-footer>div:first-child small{line-height:1.5}.nsx-contact h2{font-size:clamp(2.65rem,12vw,3.8rem);line-height:.97}.nsx-service-hero h1{font-size:clamp(2.9rem,13vw,4.15rem);line-height:.95}}
 
 .nsx-services-menu>a{gap:8px}.nsx-services-menu>a .nsx-menu-toggle{width:18px;height:18px;margin:0;display:grid;place-items:center;border:1px solid rgba(201,255,74,.65);border-radius:50%;color:var(--lime);font:700 14px/1 Arial,sans-serif;transition:transform .25s ease,background .25s ease,color .25s ease}.nsx-services-menu:hover>a .nsx-menu-toggle,.nsx-services-menu:focus-within>a .nsx-menu-toggle{transform:rotate(45deg);background:var(--lime);color:#080d17}.nsx-nav>a{transition:color .2s ease,transform .2s ease}.nsx-nav>a:hover{color:var(--lime);transform:translateY(-1px)}.address-card p{margin:12px 0 0;color:#dce3ef;font-size:16px;line-height:1.65}.address-card{padding:20px 22px}
+
+/* Prominent order CTA and reliable viewport-level mobile navigation. */
+.nsx-nav>a.nsx-order-link{align-self:center;height:auto;padding:11px 16px;border:1px solid var(--lime);border-radius:999px;background:var(--lime);color:#080d17;font-weight:850;box-shadow:0 0 22px rgba(201,255,74,.2)}
+.nsx-nav>a.nsx-order-link:hover{color:#080d17;transform:translateY(-2px);box-shadow:0 0 30px rgba(201,255,74,.34)}
+.nsx-order-link span{margin-left:8px}
+.nsx-mobile-toggle{padding:10px 13px;border:1px solid var(--line);border-radius:999px;background:#080d19;color:var(--lime);cursor:pointer;font:850 9px/1 Arial,sans-serif;text-transform:uppercase}
+.nsx-mobile-toggle span{display:inline-block;margin-left:5px;font-size:13px}
+.nsx-mobile-menu>nav{display:none;position:fixed;z-index:1000;top:88px;right:14px;left:14px;width:auto;max-height:calc(100dvh - 102px);padding:10px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#080d19;color:#e4ebf7;box-shadow:0 25px 70px rgba(0,0,0,.72)}
+.nsx-mobile-menu>nav.is-open{display:grid}
+.nsx-mobile-menu>nav>a,.nsx-mobile-menu>nav>details>summary{position:relative;z-index:1;min-height:48px;padding:14px 12px;display:flex;align-items:center;justify-content:space-between;border:0;border-bottom:1px solid var(--line);color:#e4ebf7;font-size:14px;font-weight:750;line-height:1.35;visibility:visible;opacity:1}
+.nsx-mobile-menu>nav>details>summary{cursor:pointer;list-style:none}
+.nsx-mobile-menu>nav>details>summary::-webkit-details-marker{display:none}
+.nsx-mobile-menu>nav>details>div{display:grid;max-height:52dvh;overflow:auto;background:#0d1428}
+.nsx-mobile-menu>nav>details section{padding:8px 13px;display:grid}
+.nsx-mobile-menu>nav>details section a{padding:10px 0;border-bottom:1px solid var(--line);color:#bdc8da;font-size:12px;line-height:1.4;visibility:visible;opacity:1}
+.nsx-mobile-menu>nav>details .nsx-dropdown-category{color:var(--lime);font-size:13px;font-weight:850}
+.nsx-mobile-menu>nav>a.nsx-order-link{min-height:52px;margin-top:10px;justify-content:center;border:1px solid var(--lime);border-radius:10px;background:var(--lime);color:#080d17;font-weight:900;box-shadow:0 0 24px rgba(201,255,74,.22)}
+@media(max-width:560px){.nsx-mobile-menu>nav{top:74px}}
