@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">UtiliTech logo</title>
+  <rect width="64" height="64" rx="18" fill="#c9ff4a"/>
+  <path d="M15 14v22c0 10.5 6.4 16 16.5 16 5.7 0 10.1-1.8 12.9-5.2 2.7-3.2 4.1-7.3 4.1-12.3V14h-9v20.7c0 5.8-2.6 8.8-7.6 8.8-5.2 0-7.9-3-7.9-8.8V14z" fill="#080c13"/>
+  <path d="m35 7-9 22h7l-3 16 13-23h-8l6-15z" fill="#6e8cff"/>
+</svg>
