@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./service-packages.css";
 
 :root {
   --ink: #f7f9ff;

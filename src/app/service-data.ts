@@ -1,7 +1,10 @@
-export type Service = { slug:string; title:string; category:string; short:string; intro:string; benefits:string[]; deliverables:string[]; price?:number };
+export type ServicePackage={id:string;name:string;heading:string;description:string;price:number;features:string[]};
+export type Service = { slug:string; title:string; category:string; short:string; intro:string; benefits:string[]; deliverables:string[]; price?:number;packages?:ServicePackage[] };
+
+export const logoPackages:ServicePackage[]=[{id:"starter-logo",name:"Starter Logo",heading:"For new businesses that need a clean, professional starting point",description:"A focused logo package for founders launching a small business, local service or personal brand.",price:4999,features:["2 original logo concepts","2 revision rounds","Colour and monochrome versions","PNG, JPG and SVG files"]},{id:"professional-logo",name:"Professional Logo",heading:"For growing brands that need more choice and flexibility",description:"A broader creative process with practical variants for websites, social profiles and business material.",price:9999,features:["4 original logo concepts","4 revision rounds","Primary and secondary logo variants","Complete web and print file set"]},{id:"brand-identity",name:"Logo & Brand Identity",heading:"For businesses building a complete and consistent visual identity",description:"A complete identity foundation that keeps the brand recognisable across every customer touchpoint.",price:17999,features:["5 logo concepts and refinements","Logo suite and brand mark","Colour and typography system","Mini brand-guideline document"]}];
 
 const startingPrices:Record<string,number>={"website-design":14999,"website-development":24999,"responsive-websites":17999,"logo-design":7999,"website-redesign":19999,"website-maintenance":4999,"corporate-websites":34999,"blog-websites":17999,seo:9999,"ppc-management":9999,"social-media":11999,"email-marketing":8999,"custom-web-applications":49999,"content-management-systems":29999,"school-management-systems":79999,"mobile-applications":69999,"ecommerce-websites":39999,"motion-presentations":14999,"interactive-web-experiences":29999,"digital-advertising-creative":9999,"domain-registration":1499,"web-hosting":4999,"ssl-certificates":1999};
-export function servicePrice(service:Service){return service.price??startingPrices[service.slug]??14999}
+export function servicePrice(service:Service){return service.packages?.length?Math.min(...service.packages.map(item=>item.price)):service.price??startingPrices[service.slug]??14999}
 export function formatPrice(service:Service){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(servicePrice(service))}
 
 const raw: Array<[string,string,string,string]> = [
@@ -38,7 +41,7 @@ const detailByCategory: Record<string,{intro:string;benefits:string[];deliverabl
   "Domain & Hosting": { intro:"Domains, hosting and security form the quiet foundation of every reliable website. We configure the right setup, keep ownership clear and document renewals so there are no avoidable surprises.", benefits:["Reliable website availability","Clear account ownership and renewals","Secure, correctly configured foundations"], deliverables:["Setup consultation","Domain & DNS","Hosting or migration","SSL & monitoring"] },
 };
 
-export const services: Service[] = raw.map(([slug,title,category,short]) => ({ slug,title,category,short,price:startingPrices[slug]??14999,...detailByCategory[category] }));
+export const services: Service[] = raw.map(([slug,title,category,short]) => ({ slug,title,category,short,price:startingPrices[slug]??14999,packages:slug==="logo-design"?logoPackages:[],...detailByCategory[category] }));
 export const serviceBySlug = Object.fromEntries(services.map((service)=>[service.slug,service])) as Record<string,Service>;
 export const serviceGroups = [
   {number:"01",title:"Design & Development",description:"Distinctive, responsive websites designed around your business and the actions customers should take.",services:["website-design","website-development","responsive-websites","logo-design","website-redesign","website-maintenance","corporate-websites","blog-websites"]},

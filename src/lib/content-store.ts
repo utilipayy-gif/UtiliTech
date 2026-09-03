@@ -20,7 +20,7 @@ export async function getServices(): Promise<Service[]> {
   if (!contentStoreIsConfigured()) return pricedDefaults;
   try {
     const rows = await database().query(
-      `select slug, title, category, short, intro, benefits, deliverables, price
+      `select slug, title, category, short, intro, benefits, deliverables, price, packages
        from public.site_services
        where site_key = $1
        order by sort_order asc`,
@@ -48,16 +48,16 @@ export async function saveServices(services: Service[]) {
      )
      insert into public.site_services (
        site_key, slug, title, category, short, intro,
-       benefits, deliverables, price, sort_order, updated_at
+       benefits, deliverables, price, packages, sort_order, updated_at
      )
      select
        $1, item.slug, item.title, item.category, item.short, item.intro,
        coalesce(item.benefits, '[]'::jsonb),
-       coalesce(item.deliverables, '[]'::jsonb), coalesce(item.price,14999),
+       coalesce(item.deliverables, '[]'::jsonb), coalesce(item.price,14999), coalesce(item.packages,'[]'::jsonb),
        coalesce(item.sort_order, 0), now()
      from jsonb_to_recordset($2::jsonb) as item(
        slug text, title text, category text, short text, intro text,
-       benefits jsonb, deliverables jsonb, price integer, sort_order integer
+       benefits jsonb, deliverables jsonb, price integer, packages jsonb, sort_order integer
      )`,
     [siteKey, JSON.stringify(payload)],
   );
