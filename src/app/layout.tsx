@@ -30,7 +30,13 @@ export const metadata: Metadata = {
   description:
     "Website design, development, digital marketing, applications, domains and hosting for growing businesses.",
   alternates: { canonical: "/" },
-  icons: { icon: [{ url: "/logo-mark.svg", type: "image/svg+xml" }] },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/logo-mark.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+  },
   robots: { index: true, follow: true },
   openGraph: {
     title: "UtiliTech",
