@@ -30,7 +30,7 @@ export default function LeadForm({whatsapp="919653127760"}:{whatsapp?:string}) {
       <div className="form-row">
         <label>
           Your name <span>*</span>
-          <input name="name" autoComplete="name" required placeholder="Your name" />
+          <input name="name" autoComplete="name" minLength={2} required placeholder="Your name" />
         </label>
         <label>
           Business name

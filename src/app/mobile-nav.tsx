@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type MobileGroup = {
   title: string;
@@ -14,11 +14,32 @@ function categoryId(value: string) {
 
 export default function MobileNav({ groups }: { groups: MobileGroup[] }) {
   const [open, setOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const close = () => setOpen(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    requestAnimationFrame(() => navRef.current?.querySelector<HTMLElement>("a, summary")?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
     <div className="nsx-mobile-menu">
       <button
+        ref={toggleRef}
         className="nsx-mobile-toggle"
         type="button"
         aria-expanded={open}
@@ -27,7 +48,15 @@ export default function MobileNav({ groups }: { groups: MobileGroup[] }) {
       >
         Menu <span aria-hidden="true">{open ? "×" : "+"}</span>
       </button>
+      <button
+        className={`nsx-mobile-backdrop ${open ? "is-open" : ""}`}
+        type="button"
+        aria-label="Close mobile navigation"
+        tabIndex={open ? 0 : -1}
+        onClick={close}
+      />
       <nav
+        ref={navRef}
         id="utilitech-mobile-navigation"
         className={open ? "is-open" : ""}
         aria-label="Mobile navigation"

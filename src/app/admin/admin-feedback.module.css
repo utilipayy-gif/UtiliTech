@@ -1,0 +1,10 @@
+.spinner{width:13px;height:13px;margin-right:8px;display:inline-block;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;z-index:1000;top:22px;right:22px;width:min(390px,calc(100% - 28px));padding:15px 14px;display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:#10172c;box-shadow:0 24px 70px rgba(0,0,0,.55);font-size:13px;line-height:1.45}
+.toast>span{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;font-weight:900}.toast p{margin:0}.toast button{padding:4px;border:0;background:transparent;color:inherit;font-size:21px;cursor:pointer}
+.toastSuccess{border-color:rgba(201,255,74,.5)}.toastSuccess>span{background:#c9ff4a;color:#080c13}.toastError{border-color:#ff6f79}.toastError>span{background:#d84e56;color:white}
+.validationScope button[aria-busy=true]{cursor:wait;opacity:.58}
+.validationScope input:user-invalid,.validationScope textarea:user-invalid{border-color:#ff6f79;box-shadow:0 0 0 2px rgba(255,111,121,.14)}
+.validationScope label:has(input:user-invalid,textarea:user-invalid)::after{content:"Check this field.";color:#ff8f99;font-size:11px;font-weight:750;letter-spacing:0}
+@media(max-width:650px){.toast{top:14px;right:14px}}
+@media(prefers-reduced-motion:reduce){.spinner{animation:none}}
