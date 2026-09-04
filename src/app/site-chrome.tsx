@@ -16,7 +16,7 @@ export function UtiliHeader({services}:{services:Service[]}){
       <Link href="/about">About us</Link><Link href="/contact">Contact</Link><Link className="nsx-order-link" href="/checkout">Order services <span aria-hidden="true">↗</span></Link>
     </nav>
     <MobileNav groups={groups}/>
-    <Link className="nsx-head-cta" href="/checkout">Choose a package <span>↗</span></Link>
+    <Link className="nsx-head-cta" href="/checkout">Start an order <span>↗</span></Link>
   </header>
 }
 
