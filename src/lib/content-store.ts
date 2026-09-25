@@ -5,7 +5,7 @@ const siteKey = "utilitech";
 const pricedDefaults=defaultServices.map(service=>({...service,price:servicePrice(service)}));
 
 export type SiteSettings = { phone:string; email:string; whatsapp:string; address:string; legalName:string; registrationDate:string; cin:string; gst:string };
-export const defaultSiteSettings:SiteSettings={phone:"+91 96531 27760",email:"utilipayhub@gmail.com",whatsapp:"919653127760",address:"420, 4th Floor, Metro Trade Center, VIP Road, Zirakpur, Mohali - 140603",legalName:"BILLVERSE TECHNOLOGIES (OPC) PRIVATE LIMITED",registrationDate:"20/07/2026",cin:"U82990HR2026OPC148111",gst:"06AAOCB9584D1ZA"};
+export const defaultSiteSettings:SiteSettings={phone:"+91 96531 27760",email:"utilipayhub@gmail.com",whatsapp:"919653127760",address:"420, 4th Floor, Metro Trade Center, VIP Road, Zirakpur, Mohali - 140603",legalName:"UTILIPAY HUB (OPC) PRIVATE LIMITED",registrationDate:"20/07/2026",cin:"U82990HR2026OPC148111",gst:"06AAOCB9584D1ZA"};
 
 export function contentStoreIsConfigured() {
   return Boolean(process.env.DATABASE_URL);
