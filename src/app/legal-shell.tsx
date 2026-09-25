@@ -41,7 +41,7 @@ export default async function LegalShell({ title, intro, children }: LegalShellP
       </div>
 
       <footer className="legal-footer">
-        <div><strong>Address</strong><span>{settings.address}</span><a href={`mailto:${settings.email}`}>{settings.email}</a></div>
+        <div><strong>{settings.legalName}</strong><span>{settings.address}</span><a href={`mailto:${settings.email}`}>{settings.email}</a></div>
         <div><span>© 2026 UtiliTech</span><Link href="/privacy">Privacy</Link><Link href="/refund">Refunds</Link><Link href="/terms">Terms</Link><Link href="/shipping">Shipping</Link></div>
       </footer>
     </main>
