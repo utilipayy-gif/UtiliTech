@@ -13,7 +13,7 @@ export default function LeadForm({whatsapp="919653127760"}:{whatsapp?:string}) {
     const service = String(form.get("service") ?? "Not sure yet");
     const message = String(form.get("message") ?? "").trim();
     const text = [
-      `Hi UtiliTech, I’m ${name}.`,
+      `Hi, I’m ${name}. I’d like to contact UTILIPAY HUB.`,
       business ? `Business: ${business}.` : "",
       `I’m interested in: ${service}.`,
       message ? `A little more context: ${message}` : "",

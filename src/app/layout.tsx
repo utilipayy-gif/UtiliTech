@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "ProfessionalService",
-  name: "UtiliTech",
+  name: "UTILIPAY HUB (OPC) PRIVATE LIMITED",
   url: "https://utilitech.in",
   email: "utilipayhub@gmail.com",
   telephone: "+91-96531-27760",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://utilitech.in",
   ),
-  title: "UtiliTech — Web Design, Development & Digital Marketing",
+  title: "UTILIPAY HUB (OPC) PRIVATE LIMITED — Web Design, Development & Digital Marketing",
   description:
     "Website design, development, digital marketing, applications, domains and hosting for growing businesses.",
   alternates: { canonical: "/" },
@@ -39,17 +39,17 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "UtiliTech",
+    title: "UTILIPAY HUB (OPC) PRIVATE LIMITED",
     description: "Connected web, application and digital growth services.",
     url: "/",
-    siteName: "UtiliTech",
+    siteName: "UTILIPAY HUB (OPC) PRIVATE LIMITED",
     locale: "en_IN",
     type: "website",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "UtiliTech" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "UTILIPAY HUB (OPC) PRIVATE LIMITED" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "UtiliTech",
+    title: "UTILIPAY HUB (OPC) PRIVATE LIMITED",
     description: "Connected web, application and digital growth services.",
     images: ["/og.png"],
   },

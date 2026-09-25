@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/services/[slug]">): Promise<Metadata> {
   const service = await getService((await params).slug);
-  return service ? { title: `${service.title} | UtiliTech`, description: service.short } : {};
+  return service ? { title: `${service.title} | UTILIPAY HUB (OPC) PRIVATE LIMITED`, description: service.short } : {};
 }
 
 export default async function ServicePage({ params }: PageProps<"/services/[slug]">) {
@@ -41,7 +41,7 @@ export default async function ServicePage({ params }: PageProps<"/services/[slug
         </div>
       </div>
       <div className="nsx-service-console">
-        <div><span>UTILITECH / SERVICE</span><b>● READY</b></div><small>{service.category}</small><strong>{service.title}</strong>
+        <div><span>UTILIPAY HUB / SERVICE</span><b>● READY</b></div><small>{service.category}</small><strong>{service.title}</strong>
         <div className="nsx-console-lines"><i /><i /><i /><i /><i /></div><p>STRATEGY → BUILD → LAUNCH</p>
       </div>
     </section>

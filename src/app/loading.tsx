@@ -1,7 +1,7 @@
 export default function Loading() {
   return (
     <main className="nsx-loading" aria-busy="true" aria-live="polite">
-      <span className="loading-status">Loading UtiliTech…</span>
+      <span className="loading-status">Loading UTILIPAY HUB…</span>
       <header>
         <span className="loading-brand">U</span>
         <span className="loading-pill" />

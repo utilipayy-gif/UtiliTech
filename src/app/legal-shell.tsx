@@ -14,15 +14,15 @@ export default async function LegalShell({ title, intro, children }: LegalShellP
   return (
     <main className="legal-page">
       <header className="legal-header">
-        <Link className="brand" href="/" aria-label="UtiliTech home">
+        <Link className="brand" href="/" aria-label="UTILIPAY HUB (OPC) PRIVATE LIMITED home">
           <Image className="brand-logo" src="/logo-mark.svg" alt="" width={34} height={34} priority />
-          <span>UTILITECH</span>
+          <span>UTILIPAY HUB</span>
         </Link>
         <Link className="legal-home-link" href="/">Back to website <span aria-hidden="true">↗</span></Link>
       </header>
 
       <section className="legal-hero">
-        <span className="section-kicker">Legal / utilitech.in</span>
+        <span className="section-kicker">Legal / UTILIPAY HUB</span>
         <h1>{title}</h1>
         <p>{intro}</p>
         <div className="legal-meta"><span>Effective 1 September 2026</span><span>Last updated 1 September 2026</span></div>
@@ -42,7 +42,7 @@ export default async function LegalShell({ title, intro, children }: LegalShellP
 
       <footer className="legal-footer">
         <div><strong>{settings.legalName}</strong><span>{settings.address}</span><a href={`mailto:${settings.email}`}>{settings.email}</a></div>
-        <div><span>© 2026 UtiliTech</span><Link href="/privacy">Privacy</Link><Link href="/refund">Refunds</Link><Link href="/terms">Terms</Link><Link href="/shipping">Shipping</Link></div>
+        <div><span>© 2026 UTILIPAY HUB (OPC) PRIVATE LIMITED</span><Link href="/privacy">Privacy</Link><Link href="/refund">Refunds</Link><Link href="/terms">Terms</Link><Link href="/shipping">Shipping</Link></div>
       </footer>
     </main>
   );

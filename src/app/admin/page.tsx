@@ -56,7 +56,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (!(await isAdminAuthenticated())) {
     return <main className={`${styles.shell} ${feedback.validationScope}`}>
       <section className={styles.login}>
-        <span>UTILITECH / CONTENT ADMIN</span>
+        <span>UTILIPAY HUB / CONTENT ADMIN</span>
         <h1>Sign in to manage services.</h1>
         {key && <p className={styles.alert}>{message[key]}</p>}
         {!configured && <div className={styles.setup}><strong>Admin setup required</strong><p>Add ADMIN_EMAIL, ADMIN_PASSWORD and a 32+ character ADMIN_SESSION_SECRET to your environment, then restart the website.</p></div>}
@@ -78,7 +78,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
 
   return <main className={`${styles.shell} ${feedback.validationScope}`}>
     <header className={styles.header}>
-      <div><span>UTILITECH / ADMIN</span><h1>Website content</h1><p>{services.length} live service pages</p></div>
+      <div><span>UTILIPAY HUB / ADMIN</span><h1>Website content</h1><p>{services.length} live service pages</p></div>
       <div>
         <Link href="/" target="_blank">View website ↗</Link>
         <form action={logoutAction}><AdminSubmitButton pendingText="Signing out…">Log out</AdminSubmitButton></form>
