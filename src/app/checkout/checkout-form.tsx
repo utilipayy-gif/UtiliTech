@@ -96,6 +96,13 @@ export default function CheckoutForm({ services, initialService, initialPackage 
   const [choice, setChoice] = useState(options[0]?.key ?? "");
   const [ready, setReady] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [simulationData, setSimulationData] = useState<{
+    orderId: string;
+    gatewayUrl: string;
+    params: Record<string, string>;
+  } | null>(null);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -123,6 +130,8 @@ export default function CheckoutForm({ services, initialService, initialPackage 
   const money = (value: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
   const update = (key: string, amount: number) => {
     setReady(false);
+    setSimulationData(null);
+    setPaymentError("");
     setItems((current) => {
       const next = { ...current, [key]: Math.max(0, (current[key] ?? 0) + amount) };
       if (!next[key]) delete next[key];
@@ -130,9 +139,104 @@ export default function CheckoutForm({ services, initialService, initialPackage 
     });
   };
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setReady(true);
+    if (!selected.length) return;
+
+    setPaymentError("");
+    setSimulationData(null);
+    setSubmitting(true);
+
+    try {
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+
+      const name = String(formData.get("name") || "").trim();
+      const email = String(formData.get("email") || "").trim();
+      const phone = String(formData.get("phone") || "").trim();
+      const business = String(formData.get("business") || "").trim();
+      const notes = String(formData.get("notes") || "").trim();
+
+      const orderItems = selected.map((item) => ({
+        key: item.key,
+        title: item.serviceTitle,
+        packageName: item.packageName,
+        quantity: items[item.key] ?? 1,
+        price: item.price,
+      }));
+
+      const res = await fetch("/api/payment/airpay/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          business,
+          notes,
+          items: orderItems,
+          total,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to initiate payment with Airpay.");
+      }
+
+      setReady(true);
+
+      if (data.isSimulation) {
+        setSimulationData(data);
+        setSubmitting(false);
+        return;
+      }
+
+      // Automatically redirect to Airpay hosted gateway
+      const hiddenForm = document.createElement("form");
+      hiddenForm.method = "POST";
+      hiddenForm.action = data.gatewayUrl;
+      for (const [k, v] of Object.entries(data.params as Record<string, string>)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = String(v);
+        hiddenForm.appendChild(input);
+      }
+      document.body.appendChild(hiddenForm);
+      hiddenForm.submit();
+    } catch (err) {
+      console.error("Airpay initiate error:", err);
+      setPaymentError(err instanceof Error ? err.message : "Payment initialization error.");
+      setSubmitting(false);
+    }
+  }
+
+  function handleSimulationAction(outcome: "success" | "failed" | "gateway") {
+    if (!simulationData) return;
+    if (outcome === "gateway") {
+      const hiddenForm = document.createElement("form");
+      hiddenForm.method = "POST";
+      hiddenForm.action = simulationData.gatewayUrl;
+      for (const [k, v] of Object.entries(simulationData.params)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = String(v);
+        hiddenForm.appendChild(input);
+      }
+      document.body.appendChild(hiddenForm);
+      hiddenForm.submit();
+      return;
+    }
+
+    const callbackUrl = `/api/payment/airpay/callback?TRANSACTIONID=${encodeURIComponent(
+      simulationData.orderId
+    )}&APTRANSACTIONID=SIM_${Date.now()}&AMOUNT=${total}&TRANSACTIONSTATUS=${
+      outcome === "success" ? "200" : "FAILED"
+    }&MESSAGE=${outcome === "success" ? "Simulation Success" : "Simulation Failed"}&ap_SecureHash=simulated_hash`;
+    window.location.href = callbackUrl;
   }
 
   return (
@@ -142,29 +246,55 @@ export default function CheckoutForm({ services, initialService, initialPackage 
           <label>
             Add a service or package
             <select value={choice} onChange={(event) => setChoice(event.target.value)}>
-              {options.map((item) => <option value={item.key} key={item.key}>
-                {item.serviceTitle}{item.packageName ? ` — ${item.packageName}` : ""} — {money(item.price)}
-              </option>)}
+              {options.map((item) => (
+                <option value={item.key} key={item.key}>
+                  {item.serviceTitle}
+                  {item.packageName ? ` — ${item.packageName}` : ""} — {money(item.price)}
+                </option>
+              ))}
             </select>
           </label>
-          <button type="button" onClick={() => update(choice, 1)}>Add to order +</button>
+          <button type="button" onClick={() => update(choice, 1)}>
+            Add to order +
+          </button>
         </div>
-        {selected.length ? <div className="order-items">
-          {selected.map((item) => <article key={item.key}>
-            <div>
-              <span>{item.category}</span>
-              <h3>{item.serviceTitle}</h3>
-              {item.packageName && <strong className="order-package-name">{item.packageName}</strong>}
-              <p>{item.heading ?? `${money(item.price)} each`}</p>
-            </div>
-            <div className="order-quantity">
-              <button type="button" aria-label={`Remove one ${item.packageName ?? item.serviceTitle}`} onClick={() => update(item.key, -1)}>−</button>
-              <strong>{items[item.key]}</strong>
-              <button type="button" aria-label={`Add one ${item.packageName ?? item.serviceTitle}`} onClick={() => update(item.key, 1)}>+</button>
-            </div>
-            <b>{money(item.price * (items[item.key] ?? 0))}</b>
-          </article>)}
-        </div> : <div className="order-empty"><strong>Your order is empty.</strong><p>Select a service or package above to start building it.</p></div>}
+        {selected.length ? (
+          <div className="order-items">
+            {selected.map((item) => (
+              <article key={item.key}>
+                <div>
+                  <span>{item.category}</span>
+                  <h3>{item.serviceTitle}</h3>
+                  {item.packageName && <strong className="order-package-name">{item.packageName}</strong>}
+                  <p>{item.heading ?? `${money(item.price)} each`}</p>
+                </div>
+                <div className="order-quantity">
+                  <button
+                    type="button"
+                    aria-label={`Remove one ${item.packageName ?? item.serviceTitle}`}
+                    onClick={() => update(item.key, -1)}
+                  >
+                    −
+                  </button>
+                  <strong>{items[item.key]}</strong>
+                  <button
+                    type="button"
+                    aria-label={`Add one ${item.packageName ?? item.serviceTitle}`}
+                    onClick={() => update(item.key, 1)}
+                  >
+                    +
+                  </button>
+                </div>
+                <b>{money(item.price * (items[item.key] ?? 0))}</b>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="order-empty">
+            <strong>Your order is empty.</strong>
+            <p>Select a service or package above to start building it.</p>
+          </div>
+        )}
       </div>
 
       <aside className="order-summary" id="project-details">
@@ -172,23 +302,106 @@ export default function CheckoutForm({ services, initialService, initialPackage 
         <h2>Project details</h2>
         <CheckoutField label="Full name" name="name" autoComplete="name" minLength={2} required />
         <CheckoutField label="Email" name="email" type="email" autoComplete="email" required />
-        <CheckoutField label="Phone / WhatsApp" name="phone" type="tel" autoComplete="tel" pattern="[0-9+() -]{7,20}" required />
+        <CheckoutField
+          label="Phone / WhatsApp"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          pattern="[0-9+() -]{7,20}"
+          required
+        />
         <CheckoutField label="Business name" name="business" autoComplete="organization" />
         <CheckoutField label="Anything we should know?" name="notes" multiline rows={3} />
+
         <div className="order-total">
           <span>Estimated total</span>
           <strong>{money(total)}</strong>
-          <small>Final scope and applicable taxes are confirmed before payment.</small>
+          <small>Secure payment processing via Airpay Gateway (INR).</small>
         </div>
+
         {restored && selected.length > 0 && <p className="order-saved">✓ Your selection is saved on this device.</p>}
-        <button className="button button-primary" disabled={!selected.length}>Proceed to payment →</button>
-        {ready && <p className="order-ready" role="status"><strong>Your order is ready.</strong> Secure gateway processing can now be connected to this confirmed package selection.</p>}
+
+        {paymentError && (
+          <p className="field-error" style={{ margin: "10px 0", color: "#ff6f79", fontSize: 13 }} role="alert">
+            {paymentError}
+          </p>
+        )}
+
+        <button className="button button-primary" type="submit" disabled={!selected.length || submitting}>
+          {submitting ? "Connecting to Airpay..." : "Proceed to payment →"}
+        </button>
+
+        {simulationData && (
+          <div
+            style={{
+              marginTop: 18,
+              padding: 16,
+              borderRadius: 12,
+              background: "rgba(255, 193, 7, 0.12)",
+              border: "1px solid rgba(255, 193, 7, 0.35)",
+              color: "#fff",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 16 }}>🧪</span>
+              <strong style={{ color: "#ffc107", fontSize: 13 }}>Airpay Test / Simulation Active</strong>
+            </div>
+            <p style={{ margin: "0 0 12px 0", fontSize: 12, color: "#cbd5e1" }}>
+              Order ID: <code>{simulationData.orderId}</code>. Test credentials or simulation mode enabled. Select an
+              action to test your payment flow:
+            </p>
+            <div style={{ display: "grid", gap: 8 }}>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ fontSize: 12, minHeight: 38 }}
+                onClick={() => handleSimulationAction("success")}
+              >
+                Simulate Payment Success ✓
+              </button>
+              <button
+                type="button"
+                className="button button-ghost"
+                style={{ fontSize: 12, minHeight: 38 }}
+                onClick={() => handleSimulationAction("failed")}
+              >
+                Simulate Payment Failure ✕
+              </button>
+              <button
+                type="button"
+                className="button button-ghost"
+                style={{ fontSize: 12, minHeight: 38 }}
+                onClick={() => handleSimulationAction("gateway")}
+              >
+                Forward to Airpay Gateway URL ↗
+              </button>
+            </div>
+          </div>
+        )}
+
+        {ready && !simulationData && !submitting && (
+          <p className="order-ready" role="status">
+            <strong>Connecting...</strong> Redirecting to Airpay secure payment gateway.
+          </p>
+        )}
       </aside>
 
-      {selected.length > 0 && <div className="order-mobile-total" aria-live="polite">
-        <span><small>Order total</small><strong>{money(total)}</strong></span>
-        <button type="button" onClick={() => document.getElementById("project-details")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Review order →</button>
-      </div>}
+      {selected.length > 0 && (
+        <div className="order-mobile-total" aria-live="polite">
+          <span>
+            <small>Order total</small>
+            <strong>{money(total)}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById("project-details")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Review order →
+          </button>
+        </div>
+      )}
     </form>
   );
 }
