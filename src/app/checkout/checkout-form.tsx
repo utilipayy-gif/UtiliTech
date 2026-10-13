@@ -98,11 +98,6 @@ export default function CheckoutForm({ services, initialService, initialPackage 
   const [restored, setRestored] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const [simulationData, setSimulationData] = useState<{
-    orderId: string;
-    gatewayUrl: string;
-    params: Record<string, string>;
-  } | null>(null);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -130,7 +125,6 @@ export default function CheckoutForm({ services, initialService, initialPackage 
   const money = (value: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
   const update = (key: string, amount: number) => {
     setReady(false);
-    setSimulationData(null);
     setPaymentError("");
     setItems((current) => {
       const next = { ...current, [key]: Math.max(0, (current[key] ?? 0) + amount) };
@@ -144,7 +138,6 @@ export default function CheckoutForm({ services, initialService, initialPackage 
     if (!selected.length) return;
 
     setPaymentError("");
-    setSimulationData(null);
     setSubmitting(true);
 
     try {
@@ -187,13 +180,7 @@ export default function CheckoutForm({ services, initialService, initialPackage 
 
       setReady(true);
 
-      if (data.isSimulation) {
-        setSimulationData(data);
-        setSubmitting(false);
-        return;
-      }
-
-      // Automatically redirect to Airpay hosted gateway
+      // Automatically submit form and navigate directly to Airpay hosted gateway
       const hiddenForm = document.createElement("form");
       hiddenForm.method = "POST";
       hiddenForm.action = data.gatewayUrl;
@@ -211,32 +198,6 @@ export default function CheckoutForm({ services, initialService, initialPackage 
       setPaymentError(err instanceof Error ? err.message : "Payment initialization error.");
       setSubmitting(false);
     }
-  }
-
-  function handleSimulationAction(outcome: "success" | "failed" | "gateway") {
-    if (!simulationData) return;
-    if (outcome === "gateway") {
-      const hiddenForm = document.createElement("form");
-      hiddenForm.method = "POST";
-      hiddenForm.action = simulationData.gatewayUrl;
-      for (const [k, v] of Object.entries(simulationData.params)) {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = k;
-        input.value = String(v);
-        hiddenForm.appendChild(input);
-      }
-      document.body.appendChild(hiddenForm);
-      hiddenForm.submit();
-      return;
-    }
-
-    const callbackUrl = `/api/payment/airpay/callback?TRANSACTIONID=${encodeURIComponent(
-      simulationData.orderId
-    )}&APTRANSACTIONID=SIM_${Date.now()}&AMOUNT=${total}&TRANSACTIONSTATUS=${
-      outcome === "success" ? "200" : "FAILED"
-    }&MESSAGE=${outcome === "success" ? "Simulation Success" : "Simulation Failed"}&ap_SecureHash=simulated_hash`;
-    window.location.href = callbackUrl;
   }
 
   return (
@@ -328,60 +289,12 @@ export default function CheckoutForm({ services, initialService, initialPackage 
         )}
 
         <button className="button button-primary" type="submit" disabled={!selected.length || submitting}>
-          {submitting ? "Connecting to Airpay..." : "Proceed to payment →"}
+          {submitting ? "Redirecting to Airpay..." : "Proceed to payment →"}
         </button>
 
-        {simulationData && (
-          <div
-            style={{
-              marginTop: 18,
-              padding: 16,
-              borderRadius: 12,
-              background: "rgba(255, 193, 7, 0.12)",
-              border: "1px solid rgba(255, 193, 7, 0.35)",
-              color: "#fff",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 16 }}>🧪</span>
-              <strong style={{ color: "#ffc107", fontSize: 13 }}>Airpay Test / Simulation Active</strong>
-            </div>
-            <p style={{ margin: "0 0 12px 0", fontSize: 12, color: "#cbd5e1" }}>
-              Order ID: <code>{simulationData.orderId}</code>. Test credentials or simulation mode enabled. Select an
-              action to test your payment flow:
-            </p>
-            <div style={{ display: "grid", gap: 8 }}>
-              <button
-                type="button"
-                className="button button-primary"
-                style={{ fontSize: 12, minHeight: 38 }}
-                onClick={() => handleSimulationAction("success")}
-              >
-                Simulate Payment Success ✓
-              </button>
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ fontSize: 12, minHeight: 38 }}
-                onClick={() => handleSimulationAction("failed")}
-              >
-                Simulate Payment Failure ✕
-              </button>
-              <button
-                type="button"
-                className="button button-ghost"
-                style={{ fontSize: 12, minHeight: 38 }}
-                onClick={() => handleSimulationAction("gateway")}
-              >
-                Forward to Airpay Gateway URL ↗
-              </button>
-            </div>
-          </div>
-        )}
-
-        {ready && !simulationData && !submitting && (
+        {submitting && (
           <p className="order-ready" role="status">
-            <strong>Connecting...</strong> Redirecting to Airpay secure payment gateway.
+            <strong>Connecting...</strong> Redirecting you to Airpay secure payment gateway. Please wait.
           </p>
         )}
       </aside>
