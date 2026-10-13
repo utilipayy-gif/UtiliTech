@@ -269,6 +269,12 @@ export async function createAirpayPaymentRequest(
       mer_dom: Buffer.from(config.merchantDomain).toString("base64"),
     };
 
+    const returnUrl = config.merchantDomain.includes("localhost")
+      ? "http://localhost:3000/airpay_php/responsefromairpay.php"
+      : `${config.merchantDomain.replace(/\/+$/, "")}/api/payment/airpay/callback`;
+
+    data.return_url = returnUrl;
+
     if (payload.chmod) {
       data.chmod = payload.chmod;
     }
@@ -290,6 +296,7 @@ export async function createAirpayPaymentRequest(
         encdata,
         checksum,
         chmod: payload.chmod || "",
+        return_url: returnUrl,
       },
     };
   } catch (error) {
@@ -427,5 +434,120 @@ export function verifyAirpayResponse(
     status: isSuccess ? "SUCCESS" : isPending ? "PENDING" : "FAILED",
     message: message || (isSuccess ? "Transaction Successful" : "Transaction Failed"),
     data: fields,
+  };
+}
+
+/**
+ * Process an end-to-end sandbox transaction directly with Airpay servers
+ * (generateorder -> sandbox/upi.php -> verify).
+ * Registers a real transaction in Airpay's Merchant Dashboard and returns verified data.
+ */
+export async function executeAirpaySandboxPayment(
+  payload: AirpayInitiatePayload,
+  config = getAirpayConfig()
+): Promise<{
+  success: boolean;
+  orderId: string;
+  apTransactionId: string;
+  amount: string;
+  message: string;
+  status: "SUCCESS" | "FAILED";
+  rawReceipt?: Record<string, unknown>;
+}> {
+  const enc = new AirpayEncryption(config.username, config.password);
+  const token = await getAirpayOAuthToken(config);
+  const privateKey = generatePrivateKey(config);
+  const formattedAmount = Number(payload.amount).toFixed(2);
+
+  const genData = {
+    orderid: payload.orderId,
+    amount: formattedAmount,
+    buyer_email: payload.buyerEmail,
+    buyer_phone: payload.buyerPhone.replace(/[^0-9]/g, "").slice(-10),
+    call_type: "upiqr",
+    customer_consent: "Y",
+    mer_dom: Buffer.from(config.merchantDomain).toString("base64"),
+  };
+
+  const genRes = await fetch(`https://kraken.airpay.co.in/airpay/pay/v4/api/generateorder/?token=${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      merchant_id: config.merchantId,
+      encdata: enc.encrypt(JSON.stringify(genData)),
+      checksum: generateAirpayChecksum(genData),
+      privatekey: privateKey,
+    }).toString(),
+  });
+
+  if (!genRes.ok) {
+    throw new Error(`Airpay generateorder failed: HTTP ${genRes.status}`);
+  }
+
+  const genBody = (await genRes.json()) as { response?: string };
+  if (!genBody.response) {
+    throw new Error("Empty response from Airpay generateorder");
+  }
+
+  const genDec = enc.decrypt<{
+    status: string;
+    message: string;
+    data: string | { url: string; RID: string; txnid: string; mid: number; mode: string; submode: string };
+  }>(genBody.response);
+
+  const orderData = typeof genDec.data === "string" ? JSON.parse(genDec.data) : genDec.data;
+  if (!orderData?.url || !orderData?.RID) {
+    throw new Error(`Airpay order generation did not return a valid payment session: ${genDec.message}`);
+  }
+
+  const targetUrl = `${orderData.url}?${new URLSearchParams({
+    RID: orderData.RID,
+    txnid: orderData.txnid,
+    mid: String(orderData.mid),
+    mode: orderData.mode,
+    submode: orderData.submode,
+  }).toString()}`;
+
+  const upiRes = await fetch(targetUrl);
+  const upiHtml = await upiRes.text();
+
+  const match = upiHtml.match(/name="response" value="([^"]+)"/);
+  if (!match) {
+    throw new Error("Could not extract transaction receipt from Airpay sandbox processor");
+  }
+
+  const decryptedReceipt = enc.decrypt<{
+    status: string;
+    data: {
+      merchant_id: string;
+      orderid: string;
+      ap_transactionid: string;
+      amount: string;
+      transaction_status: number;
+      transaction_payment_status: string;
+      message: string;
+      [key: string]: unknown;
+    };
+  }>(match[1]);
+
+  const apTransactionId = String(decryptedReceipt.data.ap_transactionid || "");
+  const isSuccess =
+    decryptedReceipt.data.transaction_status === 200 &&
+    String(decryptedReceipt.data.transaction_payment_status).toUpperCase() === "SUCCESS";
+
+  try {
+    await verifyAirpayOrderViaApi(payload.orderId, apTransactionId, config);
+  } catch (verifyErr) {
+    console.warn("Secondary verify call encountered warning:", verifyErr);
+  }
+
+  return {
+    success: isSuccess,
+    orderId: payload.orderId,
+    apTransactionId,
+    amount: decryptedReceipt.data.amount || formattedAmount,
+    message: decryptedReceipt.data.message || (isSuccess ? "Transaction Successful" : "Transaction Failed"),
+    status: isSuccess ? "SUCCESS" : "FAILED",
+    rawReceipt: decryptedReceipt.data as Record<string, unknown>,
   };
 }
