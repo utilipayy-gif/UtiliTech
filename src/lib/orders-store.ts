@@ -30,9 +30,53 @@ export type OrderRecord = {
 // In-memory fallback cache for environments without database
 const memoryOrders = new Map<string, OrderRecord>();
 
+let tableInitPromise: Promise<void> | null = null;
+
 function getDatabase() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set.");
   return neon(process.env.DATABASE_URL);
+}
+
+/**
+ * Automatically ensure the site_orders table exists in Neon PostgreSQL
+ */
+async function ensureOrdersTable(): Promise<void> {
+  if (!contentStoreIsConfigured()) return;
+  if (!tableInitPromise) {
+    tableInitPromise = (async () => {
+      try {
+        const sql = getDatabase();
+        await sql.query(`
+          create table if not exists public.site_orders (
+            id serial primary key,
+            order_id text not null unique,
+            site_key text not null default 'utilitech',
+            customer_name text not null,
+            customer_email text not null,
+            customer_phone text not null,
+            customer_business text,
+            notes text,
+            items jsonb not null default '[]'::jsonb,
+            amount numeric(10, 2) not null,
+            currency text not null default 'INR',
+            status text not null default 'PENDING',
+            airpay_txn_id text,
+            airpay_status text,
+            airpay_message text,
+            raw_response jsonb,
+            created_at timestamp with time zone not null default now(),
+            updated_at timestamp with time zone not null default now()
+          );
+
+          create index if not exists idx_site_orders_order_id on public.site_orders (order_id);
+          create index if not exists idx_site_orders_site_key on public.site_orders (site_key);
+        `);
+      } catch (err) {
+        console.warn("Could not ensure site_orders table in Neon PostgreSQL:", err);
+      }
+    })();
+  }
+  return tableInitPromise;
 }
 
 export async function createOrder(order: Omit<OrderRecord, "status">): Promise<OrderRecord> {
@@ -47,6 +91,7 @@ export async function createOrder(order: Omit<OrderRecord, "status">): Promise<O
 
   if (contentStoreIsConfigured()) {
     try {
+      await ensureOrdersTable();
       const sql = getDatabase();
       await sql.query(
         `insert into public.site_orders (
@@ -95,6 +140,7 @@ export async function updateOrderStatus(
 
   if (contentStoreIsConfigured()) {
     try {
+      await ensureOrdersTable();
       const sql = getDatabase();
       await sql.query(
         `update public.site_orders
@@ -125,6 +171,7 @@ export async function updateOrderStatus(
 export async function getOrder(orderId: string): Promise<OrderRecord | null> {
   if (contentStoreIsConfigured()) {
     try {
+      await ensureOrdersTable();
       const sql = getDatabase();
       const rows = await sql.query(
         `select order_id as "orderId", site_key as "siteKey",

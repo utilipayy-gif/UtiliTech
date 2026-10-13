@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAirpayPaymentRequest, getAirpayConfig } from "@/lib/airpay";
+import { createAirpayPaymentRequest } from "@/lib/airpay";
 import { createOrder } from "@/lib/orders-store";
 
 export async function POST(request: Request) {
@@ -50,8 +50,7 @@ export async function POST(request: Request) {
       currency: "INR",
     });
 
-    const config = getAirpayConfig();
-    const checkoutData = createAirpayPaymentRequest({
+    const checkoutData = await createAirpayPaymentRequest({
       orderId,
       amount: orderAmount,
       buyerEmail: email.trim().toLowerCase(),
@@ -75,8 +74,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error initiating Airpay payment:", error);
+    const msg = error instanceof Error ? error.message : "Failed to initiate payment. Please try again.";
     return NextResponse.json(
-      { success: false, error: "Failed to initiate payment. Please try again." },
+      { success: false, error: msg },
       { status: 500 }
     );
   }
