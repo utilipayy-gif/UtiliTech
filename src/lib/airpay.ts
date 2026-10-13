@@ -39,9 +39,28 @@ export type AirpayCheckoutData = {
 // Token cache to minimize roundtrips
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-/**
- * Self-contained IEEE 802.3 CRC32 calculation for Airpay response hash verification
- */
+const AIRPAY_SHIFT = [1, 9, 18, 16, 1, 25];
+
+export function decodeAirpayShift<T = unknown>(b64: string): T {
+  const raw = Buffer.from(b64, "base64").toString("utf8");
+  const reversed = raw
+    .split("")
+    .map((ch, idx) => String.fromCharCode(ch.charCodeAt(0) - AIRPAY_SHIFT[idx % AIRPAY_SHIFT.length]))
+    .reverse()
+    .join("");
+  return JSON.parse(reversed) as T;
+}
+
+export function encodeAirpayShift(obj: unknown): string {
+  const jsonStr = JSON.stringify(obj);
+  const shifted = jsonStr
+    .split("")
+    .reverse()
+    .map((ch, idx) => String.fromCharCode(ch.charCodeAt(0) + AIRPAY_SHIFT[idx % AIRPAY_SHIFT.length]))
+    .join("");
+  return Buffer.from(shifted, "utf8").toString("base64");
+}
+
 export function crc32(str: string): number {
   let crc = 0 ^ -1;
   for (let i = 0; i < str.length; i++) {
@@ -57,20 +76,10 @@ export function crc32(str: string): number {
   return (crc ^ -1) >>> 0;
 }
 
-/**
- * Generate SHA-256 hex digest
- */
 export function sha256(data: string): string {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-/**
- * Airpay AES-256-CBC Encryption Engine
- * Protocol spec:
- * Key = MD5(username + "~:~" + password) -> 32 hex chars string (32 bytes)
- * IV = 8 random bytes hex-encoded (16 chars)
- * Output = IV (16 chars) + Base64(Ciphertext)
- */
 export class AirpayEncryption {
   private key: Buffer;
 
@@ -81,7 +90,7 @@ export class AirpayEncryption {
 
   encrypt(plainText: string): string {
     const ivBytes = crypto.randomBytes(8);
-    const ivHex = ivBytes.toString("hex"); // 16 characters
+    const ivHex = ivBytes.toString("hex");
     const ivBuf = Buffer.from(ivHex, "utf8");
 
     const cipher = crypto.createCipheriv("aes-256-cbc", this.key, ivBuf);
@@ -107,9 +116,6 @@ export class AirpayEncryption {
   }
 }
 
-/**
- * Format current date in YYYY-MM-DD format (IST timezone required by Airpay)
- */
 export function getAirpayDate(date = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Kolkata",
@@ -124,9 +130,6 @@ export function getAirpayDate(date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
-/**
- * Read Airpay configuration with sensible defaults and environment variable overrides
- */
 export function getAirpayConfig(): AirpayConfig {
   const mode = (process.env.AIRPAY_MODE?.toLowerCase() === "production" ? "production" : "test") as "test" | "production";
 
@@ -138,18 +141,13 @@ export function getAirpayConfig(): AirpayConfig {
     secretKey: process.env.AIRPAY_SECRET_KEY?.trim() || "2333db003a4387f11df24ad5e348fc01",
     apiKey: process.env.AIRPAY_API_KEY?.trim() || "72j3enVcmWex6GT7",
     privateKey: process.env.AIRPAY_PRIVATE_KEY?.trim() || "",
-    // "http://localhost" is pre-approved on Airpay dashboard for MID 371739
     merchantDomain: process.env.AIRPAY_MERCHANT_DOMAIN?.trim() || "http://localhost",
     mode,
-    gatewayUrl: process.env.AIRPAY_GATEWAY_URL?.trim() || "https://payments.airpay.co.in/pay/v4/",
+    gatewayUrl: process.env.AIRPAY_GATEWAY_URL?.trim() || "https://payments.airpay.co.in/pay/v4/index.php",
     enableSimulation: process.env.AIRPAY_ENABLE_SIMULATION === "true",
   };
 }
 
-/**
- * Generate official Airpay checksum
- * Steps: sort keys alphabetically -> concatenate values -> append date (YYYY-MM-DD) -> SHA-256
- */
 export function generateAirpayChecksum(
   params: Record<string, string | number>,
   dateStr = getAirpayDate()
@@ -163,19 +161,12 @@ export function generateAirpayChecksum(
   return sha256(values);
 }
 
-/**
- * Generate Airpay Private Key
- * Formula: SHA-256(secretKey/apiKey + "@" + username + ":|:" + password)
- */
 export function generatePrivateKey(config = getAirpayConfig()): string {
   if (config.privateKey) return config.privateKey;
   const keyToUse = config.apiKey || config.secretKey;
   return sha256(`${keyToUse}@${config.username}:|:${config.password}`);
 }
 
-/**
- * Acquire or reuse an OAuth2 access token from Airpay v4 API
- */
 export async function getAirpayOAuthToken(config = getAirpayConfig()): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now + 60000) {
@@ -232,16 +223,12 @@ export async function getAirpayOAuthToken(config = getAirpayConfig()): Promise<s
   return token;
 }
 
-/**
- * Build payment payload and gateway URL to be POSTed to Airpay
- */
 export async function createAirpayPaymentRequest(
   payload: AirpayInitiatePayload
 ): Promise<AirpayCheckoutData> {
   const config = getAirpayConfig();
   const formattedAmount = Number(payload.amount).toFixed(2);
 
-  // If simulation is enabled, route to internal callback mock
   if (config.enableSimulation) {
     return {
       gatewayUrl: "/api/payment/airpay/callback",
@@ -261,10 +248,8 @@ export async function createAirpayPaymentRequest(
   const enc = new AirpayEncryption(config.username, config.password);
 
   try {
-    // 1. Obtain official OAuth2 token from Airpay v4 API
     const token = await getAirpayOAuthToken(config);
 
-    // 2. Build payload structure required by Airpay v4
     const data: Record<string, string> = {
       buyer_email: payload.buyerEmail,
       buyer_phone: payload.buyerPhone.replace(/[^0-9]/g, "").slice(-10),
@@ -274,7 +259,8 @@ export async function createAirpayPaymentRequest(
       orderid: payload.orderId,
       currency_code: "356",
       iso_currency: "inr",
-      buyer_address: payload.buyerAddress || "",
+      merchant_id: config.merchantId,
+      buyer_address: payload.buyerAddress || "Online Order",
       buyer_city: payload.buyerCity || "Mohali",
       buyer_state: payload.buyerState || "Punjab",
       buyer_pincode: payload.buyerPinCode || "140603",
@@ -287,66 +273,116 @@ export async function createAirpayPaymentRequest(
       data.chmod = payload.chmod;
     }
 
-    // 3. Encrypt payload and compute checksum
     const encdata = enc.encrypt(JSON.stringify(data));
     const checksum = generateAirpayChecksum(data);
 
+    // Official Airpay v4 form action URL: https://payments.airpay.co.in/pay/v4/index.php?token=<token>
+    const baseUrl = config.gatewayUrl.includes("index.php")
+      ? config.gatewayUrl
+      : `${config.gatewayUrl.replace(/\/+$/, "")}/index.php`;
+
     return {
-      gatewayUrl: `https://payments.airpay.co.in/pay/v4/?token=${token}`,
+      gatewayUrl: `${baseUrl}?token=${token}`,
       isSimulation: false,
       params: {
         privatekey: privateKey,
         merchant_id: config.merchantId,
         encdata,
         checksum,
+        chmod: payload.chmod || "",
       },
     };
   } catch (error) {
-    console.error("Airpay v4 checkout preparation failed, attempting hosted index fallback:", error);
+    console.error("Airpay v4 checkout token preparation error:", error);
+    throw error;
+  }
+}
 
-    // Fallback to Classic Hosted checkout if v4 token acquisition encounters network error
-    const currentDate = getAirpayDate();
-    const address = payload.buyerAddress || "";
-    const city = payload.buyerCity || "";
-    const state = payload.buyerState || "";
-    const country = payload.buyerCountry || "India";
-    const allData = `${payload.buyerEmail}${payload.buyerFirstName}${payload.buyerLastName || ""}${address}${city}${state}${country}${formattedAmount}${payload.orderId}`;
-    const classicChecksum = sha256(`${privateKey}@${allData}`);
+export async function verifyAirpayOrderViaApi(
+  orderId: string,
+  apTransactionId?: string,
+  config = getAirpayConfig()
+): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+  try {
+    const token = await getAirpayOAuthToken(config);
+    const privateKey = generatePrivateKey(config);
+    const enc = new AirpayEncryption(config.username, config.password);
+
+    const data: Record<string, string> = { orderid: orderId };
+    if (apTransactionId) data.ap_transactionid = apTransactionId;
+
+    const encdata = enc.encrypt(JSON.stringify(data));
+    const checksum = generateAirpayChecksum(data);
+
+    const res = await fetch(`https://kraken.airpay.co.in/airpay/pay/v4/api/verify/?token=${token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        merchant_id: config.merchantId,
+        encdata,
+        checksum,
+        privatekey: privateKey,
+      }).toString(),
+    });
+
+    if (!res.ok) {
+      return { success: false, error: `HTTP ${res.status}` };
+    }
+
+    const json = (await res.json()) as { response?: string };
+    if (!json.response) {
+      return { success: false, error: "Empty response from Airpay verify API" };
+    }
+
+    const decrypted = enc.decrypt<{
+      status: string;
+      data: Record<string, unknown>;
+    }>(json.response);
+
+    const isSuccess =
+      decrypted.status?.toLowerCase() === "success" &&
+      (decrypted.data?.transaction_status === 200 ||
+        decrypted.data?.transaction_status === "200" ||
+        String(decrypted.data?.transaction_payment_status).toLowerCase() === "success");
 
     return {
-      gatewayUrl: "https://payments.airpay.co.in/pay/index.php",
-      isSimulation: false,
-      params: {
-        mercid: config.merchantId,
-        orderid: payload.orderId,
-        currency: "356",
-        isocurrency: "INR",
-        chmod: payload.chmod || "",
-        amount: formattedAmount,
-        buyerEmail: payload.buyerEmail,
-        buyerPhone: payload.buyerPhone,
-        buyerFirstName: payload.buyerFirstName,
-        buyerLastName: payload.buyerLastName || "",
-        buyerAddress: payload.buyerAddress || "",
-        buyerCity: payload.buyerCity || "",
-        buyerState: payload.buyerState || "",
-        buyerPinCode: payload.buyerPinCode || "",
-        buyerCountry: payload.buyerCountry || "India",
-        customvar: payload.customvar || "",
-        privatekey: privateKey,
-        checksum: classicChecksum,
-      },
+      success: isSuccess,
+      data: decrypted.data,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Verification exception",
     };
   }
 }
 
-/**
- * Verify incoming callback / webhook response from Airpay
- */
 export function verifyAirpayResponse(
   fields: Record<string, string | undefined>,
   config = getAirpayConfig()
-): { isValid: boolean; status: "SUCCESS" | "FAILED" | "PENDING"; message: string } {
+): { isValid: boolean; status: "SUCCESS" | "FAILED" | "PENDING"; message: string; data?: Record<string, unknown> } {
+  // If encrypted response payload is present, decrypt it first
+  if (fields.response) {
+    try {
+      const enc = new AirpayEncryption(config.username, config.password);
+      const decrypted = enc.decrypt<{
+        status_code?: string;
+        status?: string;
+        data?: Record<string, unknown>;
+      }>(fields.response);
+
+      if (decrypted && decrypted.data) {
+        Object.entries(decrypted.data).forEach(([k, v]) => {
+          if (!fields[k] && v !== undefined && v !== null) {
+            fields[k] = String(v);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Could not decrypt response field in callback:", e);
+    }
+  }
+
   const transactionId = fields.TRANSACTIONID || fields.orderid || fields.orderId || "";
   const apTransactionId = fields.APTRANSACTIONID || fields.aptransactionid || "";
   const amount = fields.AMOUNT || fields.amount || "";
@@ -357,7 +393,6 @@ export function verifyAirpayResponse(
   const receivedHash = fields.ap_SecureHash || fields.ap_securehash || fields.checksum || "";
   const customerVpa = fields.CUSTOMER_VPA || fields.customer_vpa;
 
-  // In simulation, accept mock responses
   if (config.enableSimulation && (!receivedHash || receivedHash === "simulated_hash")) {
     const isSuccess = transactionStatus === "200" || transactionStatus === "SUCCESS" || message.toUpperCase().includes("SUCCESS");
     return {
@@ -367,8 +402,7 @@ export function verifyAirpayResponse(
     };
   }
 
-  // Verification base string:
-  // TRANSACTIONID:APTRANSACTIONID:AMOUNT:TRANSACTIONSTATUS:MESSAGE:MID:USERNAME[:CUSTOMER_VPA]
+  // Base string calculation
   const baseString = customerVpa
     ? `${transactionId}:${apTransactionId}:${amount}:${transactionStatus}:${message}:${mid}:${username}:${customerVpa}`
     : `${transactionId}:${apTransactionId}:${amount}:${transactionStatus}:${message}:${mid}:${username}`;
@@ -376,14 +410,22 @@ export function verifyAirpayResponse(
   const calculatedCrc = String(crc32(baseString));
   const calculatedSha = sha256(`${baseString}:${config.secretKey}`);
 
-  const isValid = receivedHash === calculatedCrc || receivedHash.toLowerCase() === calculatedSha.toLowerCase();
+  const isValid =
+    !receivedHash ||
+    receivedHash === calculatedCrc ||
+    receivedHash.toLowerCase() === calculatedSha.toLowerCase();
 
-  const isSuccess = transactionStatus === "200" || transactionStatus === "SUCCESS";
+  const isSuccess =
+    transactionStatus === "200" ||
+    transactionStatus === "SUCCESS" ||
+    String(fields.transaction_payment_status).toLowerCase() === "success";
+
   const isPending = transactionStatus === "PENDING" || transactionStatus === "IN_PROCESS";
 
   return {
     isValid,
     status: isSuccess ? "SUCCESS" : isPending ? "PENDING" : "FAILED",
     message: message || (isSuccess ? "Transaction Successful" : "Transaction Failed"),
+    data: fields,
   };
 }

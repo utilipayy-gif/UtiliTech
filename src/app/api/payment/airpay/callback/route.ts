@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAirpayResponse } from "@/lib/airpay";
 import { updateOrderStatus } from "@/lib/orders-store";
 
-async function handleAirpayResponse(request: Request) {
+export async function handleAirpayResponse(request: Request) {
   const url = new URL(request.url);
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `${url.protocol}//${url.host}`;
   const fields: Record<string, string> = {};
@@ -27,7 +27,7 @@ async function handleAirpayResponse(request: Request) {
       });
     }
   } catch {
-    // If body reading fails, check query params
+    // If body reading fails, query parameters will be evaluated
   }
 
   // Also include query parameters
@@ -35,32 +35,55 @@ async function handleAirpayResponse(request: Request) {
     if (!fields[key]) fields[key] = val;
   });
 
-  const orderId = fields.TRANSACTIONID || fields.orderid || fields.orderId || "";
-  const apTxnId = fields.APTRANSACTIONID || fields.aptransactionid || fields.txnId || "";
-  const amount = fields.AMOUNT || fields.amount || "";
-  const message = fields.MESSAGE || fields.message || "";
-  const rawStatus = fields.TRANSACTIONSTATUS || fields.STATUS || fields.status || "";
-
   const verification = verifyAirpayResponse(fields);
+
+  const orderId =
+    fields.orderid ||
+    fields.orderId ||
+    fields.TRANSACTIONID ||
+    "";
+
+  const apTxnId =
+    fields.ap_transactionid ||
+    fields.APTRANSACTIONID ||
+    fields.txnId ||
+    "";
+
+  const amount =
+    fields.amount ||
+    fields.AMOUNT ||
+    fields.billed_amount ||
+    "";
+
+  const message =
+    fields.message ||
+    fields.MESSAGE ||
+    verification.message ||
+    "";
+
+  const rawStatus =
+    fields.transaction_payment_status ||
+    fields.TRANSACTIONSTATUS ||
+    fields.STATUS ||
+    fields.status ||
+    "";
 
   if (orderId) {
     await updateOrderStatus(orderId, {
       status: verification.status,
       airpayTxnId: apTxnId,
       airpayStatus: rawStatus,
-      airpayMessage: message || verification.message,
+      airpayMessage: message,
       rawResponse: fields,
     });
   }
 
   const redirectUrl = new URL("/checkout/status", baseUrl);
-  redirectUrl.searchParams.set("orderId", orderId);
+  if (orderId) redirectUrl.searchParams.set("orderId", orderId);
   redirectUrl.searchParams.set("status", verification.status.toLowerCase());
   if (apTxnId) redirectUrl.searchParams.set("txnId", apTxnId);
   if (amount) redirectUrl.searchParams.set("amount", amount);
-  if (message || verification.message) {
-    redirectUrl.searchParams.set("msg", message || verification.message);
-  }
+  if (message) redirectUrl.searchParams.set("msg", message);
 
   return NextResponse.redirect(redirectUrl.toString(), { status: 303 });
 }
